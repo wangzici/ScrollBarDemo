@@ -1,8 +1,11 @@
 package com.kyrie.demo.scrollbar
 
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.AttributeSet
@@ -22,6 +25,7 @@ class MyScrollBar(context: Context?, attrs: AttributeSet?) : View(context, attrs
     var mVerticalThumbTop: Int = 0//滑块当前起点位置
     var mThumbDrawable: Drawable? = null//滑块drawable
     var mTrackDrawable: Drawable? = null//滑道drawable
+    private val mHandler = Handler(Looper.getMainLooper())
 
     init {
         mThumbDrawable = ContextCompat.getDrawable(getContext(), R.color.colorAccent)
@@ -56,6 +60,7 @@ class MyScrollBar(context: Context?, attrs: AttributeSet?) : View(context, attrs
     fun attachScrollView(nestedScrollView: NestedScrollView) {
         nestedScrollView.setOnScrollChangeListener { _, _, _, _, _ ->
             calculate(nestedScrollView)
+            showNow()
         }
         val child = nestedScrollView.getChildAt(0)
         if (child is TextView) {
@@ -76,9 +81,10 @@ class MyScrollBar(context: Context?, attrs: AttributeSet?) : View(context, attrs
                 }
             })
         }
-        //调用太早无法获取测量高度，需要加入队列
-        post{
+        //调用太早无法获取测量高度
+        post {
             calculate(nestedScrollView)
+            showNow()
         }
     }
 
@@ -96,5 +102,19 @@ class MyScrollBar(context: Context?, attrs: AttributeSet?) : View(context, attrs
         mVerticalThumbTop =
             (measuredHeight - mVerticalThumbHeight) * scrollY / (contentHeight - visibleHeight)//滑块的top值范围是从0到{滑道高度-滑块高度}
         invalidate()
+    }
+
+    private val dismissRunnable = Runnable {
+        ObjectAnimator.ofFloat(this, "alpha", 1f, 0f).setDuration(1000).start()
+    }
+
+    private fun showNow() {
+        alpha = 1f
+        postDelayDismissRunnable()
+    }
+
+    private fun postDelayDismissRunnable() {
+        mHandler.removeCallbacks(dismissRunnable)
+        mHandler.postDelayed(dismissRunnable, 2000)
     }
 }
