@@ -23,6 +23,7 @@ class MyScrollBar(context: Context?, attrs: AttributeSet?) : View(context, attrs
     private var mVerticalThumbTop: Int = 0//滑块当前起点位置
     private var mThumbDrawable: Drawable? = null//滑块drawable
     private var mTrackDrawable: Drawable? = null//滑道drawable
+    private var animator: ObjectAnimator? = null//消失动画
 
     init {
         mThumbDrawable = ContextCompat.getDrawable(getContext(), R.color.colorAccent)
@@ -110,7 +111,8 @@ class MyScrollBar(context: Context?, attrs: AttributeSet?) : View(context, attrs
 
     private val dismissRunnable = Runnable {
         if (isShown) {
-            ObjectAnimator.ofFloat(this, "alpha", 1f, 0f).setDuration(500).start()
+            animator = ObjectAnimator.ofFloat(this, "alpha", alpha, 0f).setDuration(500)
+            animator?.start()
         }
     }
 
@@ -118,6 +120,10 @@ class MyScrollBar(context: Context?, attrs: AttributeSet?) : View(context, attrs
      * 立刻显示并延迟消失
      */
     private fun showNow() {
+        animator?.let {
+            it.end()
+            it.cancel()
+        }
         alpha = 1f
         postDelayDismissRunnable()
     }
