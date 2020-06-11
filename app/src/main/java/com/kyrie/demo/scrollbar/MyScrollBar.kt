@@ -4,8 +4,6 @@ import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
-import android.os.Handler
-import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.AttributeSet
@@ -20,17 +18,16 @@ import androidx.core.widget.NestedScrollView
  *
  */
 class MyScrollBar(context: Context?, attrs: AttributeSet?) : View(context, attrs) {
-    var mVerticalThumbHeight: Int = 0//滑块高度
-    var mVerticalThumbWidth: Int = 0//滑块宽度
-    var mVerticalThumbTop: Int = 0//滑块当前起点位置
-    var mThumbDrawable: Drawable? = null//滑块drawable
-    var mTrackDrawable: Drawable? = null//滑道drawable
-    private val mHandler = Handler(Looper.getMainLooper())
+    private var mVerticalThumbHeight: Int = 0//滑块高度
+    private var mVerticalThumbWidth: Int = 0//滑块宽度
+    private var mVerticalThumbTop: Int = 0//滑块当前起点位置
+    private var mThumbDrawable: Drawable? = null//滑块drawable
+    private var mTrackDrawable: Drawable? = null//滑道drawable
 
     init {
         mThumbDrawable = ContextCompat.getDrawable(getContext(), R.color.colorAccent)
         mTrackDrawable = ContextCompat.getDrawable(getContext(), R.color.colorPrimary)
-        mVerticalThumbWidth = 5
+        mVerticalThumbWidth = 10
     }
 
     override fun onDraw(canvas: Canvas?) {
@@ -55,14 +52,15 @@ class MyScrollBar(context: Context?, attrs: AttributeSet?) : View(context, attrs
     }
 
     /**
-     * @param nestedScrollView 绑定的ScrollView
+     * 与ScrollView绑定
+     * @param nestedScrollView 绑定的ScrollView,由于默认的ScrollView不自带滑动监听,所以此处用的是NestedScrollView
      */
     fun attachScrollView(nestedScrollView: NestedScrollView) {
         nestedScrollView.setOnScrollChangeListener { _, _, _, _, _ ->
             calculate(nestedScrollView)
-            showNow()
         }
         val child = nestedScrollView.getChildAt(0)
+        //由于一般ScrollView的子View都是TextView，所以我们需要在TextView的内容变换之后重新测量
         if (child is TextView) {
             child.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(
@@ -84,37 +82,48 @@ class MyScrollBar(context: Context?, attrs: AttributeSet?) : View(context, attrs
         //调用太早无法获取测量高度
         post {
             calculate(nestedScrollView)
-            showNow()
         }
     }
 
     private fun calculate(nestedScrollView: NestedScrollView) {
+        //ScrollView的高度
         val visibleHeight = nestedScrollView.measuredHeight
+        //ScrollView内部的内容高度
         val contentHeight = nestedScrollView.getChildAt(0)?.height ?: 0
+        //若不需要滚动，则直接隐藏
         if (contentHeight <= visibleHeight) {
             visibility = INVISIBLE
             return
         } else {
             visibility = VISIBLE
         }
+        //当前ScrollView内容滚动的距离
         val scrollY = nestedScrollView.scrollY
-        mVerticalThumbHeight = measuredHeight * visibleHeight / contentHeight//计算出滑块的高度
+        //计算出滑块的高度
+        mVerticalThumbHeight = measuredHeight * visibleHeight / contentHeight
+        //滑块的top值范围是从0到{滑道高度-滑块高度}
         mVerticalThumbTop =
-            (measuredHeight - mVerticalThumbHeight) * scrollY / (contentHeight - visibleHeight)//滑块的top值范围是从0到{滑道高度-滑块高度}
+            (measuredHeight - mVerticalThumbHeight) * scrollY / (contentHeight - visibleHeight)
+        showNow()
         invalidate()
     }
 
     private val dismissRunnable = Runnable {
-        ObjectAnimator.ofFloat(this, "alpha", 1f, 0f).setDuration(1000).start()
+        if (isShown) {
+            ObjectAnimator.ofFloat(this, "alpha", 1f, 0f).setDuration(500).start()
+        }
     }
 
+    /**
+     * 立刻显示并延迟消失
+     */
     private fun showNow() {
         alpha = 1f
         postDelayDismissRunnable()
     }
 
     private fun postDelayDismissRunnable() {
-        mHandler.removeCallbacks(dismissRunnable)
-        mHandler.postDelayed(dismissRunnable, 2000)
+        removeCallbacks(dismissRunnable)
+        postDelayed(dismissRunnable, 1000)
     }
 }
